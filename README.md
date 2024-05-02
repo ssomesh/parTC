@@ -24,3 +24,18 @@ The executable will be generated within the top-level directory of the repositor
 ```
 OMP_NUM_THREADS=4 ./a.out nips.tns 4d.meta 0 1
 ```
+
+Produces the following ouput:
+
+<pre><code>
+2482 2862 14036 17
+Number of elements inserted = 3101609
+Total time for insertion = 0.76703 (s)
+Number of elements inserted = 3101609
+Total time for insertion = 0.101242 (s)
+Total time for preprocessing = 0.65588 (s)
+Total time for tensor contraction = 2.12908 (s)
+Total number of nonzeros in the output tensor = 28334
+</code></pre>
+
+

@@ -155,16 +155,13 @@ Tensor tc_fksCuckoo (Hash_Table* HT_A, Hash_Table* HT_B, Tensor& A, Tensor& B) {
 
     cout << "number of flops in tensor contraction = " << total_flops_in_product << endl;
 
-    if (total_flops_in_product > 100000000000) 
-        cout << "number of flops in tensor contraction > 10^11" << endl;
-    //exit(1); // for debugging
 
     Tensor O (A, B_reordered, (unsigned) total_flops_in_product); // this is the output tensor.
     unsigned ele_count_O = 0U; // number of elements in the tensor O
 
     chrono::high_resolution_clock::time_point t20 = chrono::high_resolution_clock::now();
     elapsed1 = chrono::duration_cast<chrono::nanoseconds>(t20 - t10).count();
-    cout << "Total time for preprocessing before tensor contraction = " << (double)(elapsed1 * 1.E-9 ) << " (s)" << endl;
+    cout << "Total time for preprocessing = " << (double)(elapsed1 * 1.E-9 ) << " (s)" << endl;
 #endif
 
 
@@ -174,7 +171,7 @@ Tensor tc_fksCuckoo (Hash_Table* HT_A, Hash_Table* HT_B, Tensor& A, Tensor& B) {
     uint64_t elapsed;
     chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 
-    unsigned nThreads = 1; //omp_get_num_threads();
+    unsigned nThreads = omp_get_num_threads();
 
     omp_set_num_threads(nThreads); // Use  nThreads for all consecutive parallel regions
 
