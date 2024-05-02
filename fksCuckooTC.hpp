@@ -153,9 +153,6 @@ Tensor tc_fksCuckoo (Hash_Table* HT_A, Hash_Table* HT_B, Tensor& A, Tensor& B) {
         }
     }
 
-    cout << "number of flops in tensor contraction = " << total_flops_in_product << endl;
-
-
     Tensor O (A, B_reordered, (unsigned) total_flops_in_product); // this is the output tensor.
     unsigned ele_count_O = 0U; // number of elements in the tensor O
 
