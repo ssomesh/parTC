@@ -1,0 +1,4 @@
+#line1: number of contraction modes, c
+#line2: all the dimensions, such that the first 'c' from the left are the contraction modes
+2
+1 2 0 3
