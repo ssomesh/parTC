@@ -1,6 +1,5 @@
 
-
-// original.. revert to this version if we do not see performance gains
+#if 1
 
 #include <iostream>
 #include <chrono>
@@ -261,7 +260,14 @@ void BucketSPA::manageBucketSPASize() {
 
         if (nslots == 4) nslots = 16;
 
+        //if (nslots <= (UINT_MAX / 2))
+            //nslots += nslots;
         else   nslots = nslots << 1;
+      //  else
+      //  {
+      //      cerr << "Too many elements to insert! Aborting!!" << endl;
+      //      exit(1);
+      //  }
 
         // extend buffer's capacity
         Aux_data_SPA** temp = (Aux_data_SPA**)realloc(aux_ptrs, nslots * sizeof(Aux_data_SPA*));
@@ -296,16 +302,33 @@ void BucketSPA::rehash(unsigned eleId, TensorSPA& A, unsigned long long * kDict,
     // also adding the new element to the packed array, which will contain all the elements to be inserted
     aux_ptrs_copy[num_distinct_elements] = new Aux_data_SPA(); //the object is allocated on the heap and the pointer is returned. 
     aux_ptrs_copy[num_distinct_elements]->aux_array[0] = eleId;
+    //aux_ptrs_copy[num_distinct_elements]->size = 1;
+
+    //aux_ptrs_copy[num_distinct_elements]->insert(eleId); 
 
     manageBucketSPASize(); // resizing the bucket, if required
+   // Aux_data_SPA ** all_NULL_arr = (Aux_data_SPA**) malloc(sizeof(Aux_data_SPA*) * (nslots)); 
+//    for(int ii=0; ii < nslots; ++ii) {
+//        all_NULL_arr[ii] = NULL;
+//    }
+  //  for(int ii = 0; ii < nslots; ii += 4) { // nslots will always be a multiple of 4
+  //      all_NULL_arr[ii] = NULL;
+  //      all_NULL_arr[ii+1] = NULL;
+  //      all_NULL_arr[ii+2] = NULL;
+  //      all_NULL_arr[ii+3] = NULL;
+  //  }
 
     for(unsigned k1 = k[0]; k1 < MAX_KEYS; ++k1 ) {
         for (unsigned k2 = (k1 == k[0]) ? (k[1]+1) : 0; k2 < MAX_KEYS; ++k2) {
             if (k1 == k2) continue;
 
+            // reinitialize aux_ptrs[] to all NULL
+            //memcpy(aux_ptrs, all_NULL_arr, sizeof(Aux_data_SPA*) * nslots);
   for(unsigned ii=0; ii < nslots; ii += 2) {
       aux_ptrs[ii] = NULL;
       aux_ptrs[ii+1] = NULL;
+    //  aux_ptrs[ii] = all_NULL_arr[ii];
+    //  aux_ptrs[ii+1] = all_NULL_arr[ii+1];
   }
 
             bool fg = false;
@@ -354,6 +377,8 @@ void BucketSPA::rehash(unsigned eleId, TensorSPA& A, unsigned long long * kDict,
   for(unsigned ii=0; ii < nslots; ii += 2) {
       prev[ii] = NULL;
       prev[ii+1] = NULL;
+      //prev[ii] = all_NULL_arr[ii];
+      //prev[ii+1] = all_NULL_arr[ii+1];
   }
 
     queue[0] = items_left_after_initialization[i]; // intialized with the new element to be inserted
@@ -428,19 +453,24 @@ void BucketSPA::rehash(unsigned eleId, TensorSPA& A, unsigned long long * kDict,
 
   void BucketSPA::augment (unsigned slotId, Aux_data_SPA** prev, TensorSPA& A, unsigned long long * kDict, unsigned MAX_KEYS, unsigned p, unsigned q) {
 
+    //cout << "augment called" << endl;
 
     boost::dynamic_bitset< > marked(nslots); // bit vector of size 'nslots' bits; all 0's by default
       
       unsigned r = slotId;
       while (prev[r] != NULL && (marked[r] == 0)) 
+      //while (true) 
       {
+          // do pointer chasing
           marked[r] = 1; //true;
           Aux_data_SPA * item = prev[r];
           unsigned itemId = item->aux_array[0];
 
+/*********************************************************************************/
                 unsigned currSlot1 = (unsigned) get_index_SPA (itemId, A, kDict, k[0], p, q, nslots);
                 unsigned currSlot2 = (unsigned) get_index_SPA (itemId, A, kDict, k[1], p, q, nslots);
 
+/*********************************************************************************/
 
     unsigned tmp; 
     if (currSlot1 == r)
@@ -451,23 +481,36 @@ void BucketSPA::rehash(unsigned eleId, TensorSPA& A, unsigned long long * kDict,
     aux_ptrs[r] = item;
     r = tmp;
 
+   // if (ele_ptr == item)
+   //   break;
     }
 
   }
 
   void BucketSPA::augment (unsigned slotId, Aux_data_SPA** prev, TensorSPA& A, unsigned long long * kDict, unsigned MAX_KEYS, unsigned k1, unsigned k2, unsigned p, unsigned q) {
 
+    //cout << "augment called" << endl;
     boost::dynamic_bitset< > marked(nslots); // bit vector of size 'nslots' bits; all 0's by default
       unsigned r = slotId;
       while (prev[r] != NULL && (marked[r] == 0)) 
+      //while(true)
       {
           // do pointer chasing
           marked[r] = 1; //true;
           Aux_data_SPA * item = prev[r];
           unsigned itemId = item->aux_array[0];
 
+/*********************************************************************************/
+                //unsigned long long indice1 = get_index_SPA (itemId, A, kDict, k1, p, q, nslots);
+                //unsigned long long indice2 = get_index_SPA (itemId, A, kDict, k2, p, q, nslots);
                 unsigned currSlot1 = (unsigned) get_index_SPA (itemId, A, kDict, k1, p, q, nslots);
                 unsigned currSlot2 = (unsigned) get_index_SPA (itemId, A, kDict, k2, p, q, nslots);
+    //unsigned currSlot1 = (unsigned)indice1; // the slot to which the itemId is mapped
+    //unsigned currSlot2 = (unsigned)indice2; // the slot to which the itemId is mapped
+
+/*********************************************************************************/
+
+    unsigned tmp; 
     if (currSlot1 == r)
         tmp = currSlot2;
     else 
@@ -476,6 +519,8 @@ void BucketSPA::rehash(unsigned eleId, TensorSPA& A, unsigned long long * kDict,
     aux_ptrs[r] = item;
     r = tmp;
 
+   // if (ele_ptr == item)
+   //   break;
     }
 
   }
@@ -489,13 +534,28 @@ void BucketSPA::cuckooHash(unsigned eleId, TensorSPA& A, unsigned long long * kD
     // currently, it is invoked only for inserting the third or further elements.
     // So, it first performs augmentation, and if the chosen keys do not work, then matching from scratch is the only option
 
+//    assert (num_distinct_elements >= 2);
 
 
     Aux_data_SPA* curr_item_ptr = new Aux_data_SPA(); //the object is allocated on the heap and the pointer is returned. 
     curr_item_ptr->aux_array[0] = eleId;
+    //curr_item_ptr->size = 1;
+    //curr_item_ptr->insert(eleId); 
 
 
     // performing an elaborate augmentation
+
+//#if 0
+//    // Not required, since aux_ptrs[] will be updated only if we know that augmentation is successful
+//    Aux_data_SPA ** aux_ptrs_copy = (Aux_data_SPA**) malloc(sizeof(Aux_data_SPA*) * nslots);
+//    // this copy is needed to restore the state of aux_ptrs in case the augmentation does not succeed!
+//            //memcpy(aux_ptrs_copy, aux_ptrs, sizeof(Aux_data_SPA*) * nslots);
+//    for(unsigned ii=0; ii < nslots; ii += 2) {
+//        aux_ptrs_copy[ii] = aux_ptrs[ii];
+//        aux_ptrs_copy[ii+1] = aux_ptrs[ii+1];
+//    }
+//#endif
+
 
     boost::dynamic_bitset< > visited(nslots); // bit vector of size 'nslots' bits; all 0's by default
     Aux_data_SPA ** prev = (Aux_data_SPA**) malloc(sizeof(Aux_data_SPA*) * nslots);
@@ -555,6 +615,17 @@ void BucketSPA::cuckooHash(unsigned eleId, TensorSPA& A, unsigned long long * kD
 
   // the item could not be succesfully added, so rehash
 
+//#if 0
+//    // Not required, since aux_ptrs[] will be updated only if we know that augmentation is successful
+//  // restore the state of aux_ptrs
+//        //Attention: A linear scan of nslots
+//            //memcpy(aux_ptrs, aux_ptrs_copy, sizeof(Aux_data_SPA*) * nslots);
+//  for(unsigned ii=0; ii < nslots; ii += 2) {
+//      aux_ptrs[ii] = aux_ptrs_copy[ii];
+//      aux_ptrs[ii+1] = aux_ptrs_copy[ii+1];
+//  }
+//#endif
+              //bool change = manageBucketSPASize(); 
               rehash( eleId,  A,  kDict,  MAX_KEYS, p, q);
 }
 
@@ -569,6 +640,19 @@ Hash_Table_SPA::Hash_Table_SPA(TensorSPA& A) {
     bucket_ptrs = (BucketSPA**) malloc (sizeof(BucketSPA*) * num_buckets);
 
     bucket_ptrs_bits.resize(num_buckets, 0);
+
+    //unsigned N4 = num_buckets % 4;
+    //    unsigned N4 = (3U) & num_buckets; //computing ((b - 1) & a), Here b = 4; a = num_buckets. It is equivalent to a % b where b is a power of 2
+
+    //for(unsigned i=0; i < N4; ++i)
+    //    bucket_ptrs[i] = NULL;
+
+    //for(unsigned i=N4; i < num_buckets; i += 4) {
+    //    bucket_ptrs[i] = NULL;
+    //    bucket_ptrs[i+1] = NULL;
+    //    bucket_ptrs[i+2] = NULL;
+    //    bucket_ptrs[i+3] = NULL;
+    //}
 
 
     size = 0;
@@ -630,7 +714,10 @@ void Hash_Table_SPA::perform_second_level_hashing (unsigned eleId, TensorSPA& A,
         bucket_ptrs[bucketId] = new BucketSPA(); 
         (bucket_ptrs[bucketId]->aux_ptrs)[0] = new Aux_data_SPA(); //the object is allocated on the heap and the pointer is returned. 
     (bucket_ptrs[bucketId]->aux_ptrs)[0]->aux_array[0] = eleId;
+    //(bucket_ptrs[bucketId]->aux_ptrs)[0]->size = 1;
+        //(bucket_ptrs[bucketId]->aux_ptrs)[0]->insert(eleId); 
 
+        //bucket_ptrs[bucketId]->num_distinct_elements = 1;
         return;
     }
 
@@ -767,8 +854,12 @@ bool Hash_Table_SPA::find_element_new (Ele_pos& ele_pos, TensorSPA& A, unsigned 
 
     unsigned long long  somme= 0;
         unsigned num_key_dimensions = A.d;
+        //unsigned N2 = num_key_dimensions % 2; // replace the computation with (find next multiple of 2 after num_key_dimensions and subtract 2 from it)
         unsigned N2 = (1U) & num_key_dimensions; //computing ((b - 1) & a), Here b = 2; a = num_key_dimensions. It is equivalent to a % b where b is a power of 2
 
+
+    //for (unsigned j = 0; j < A.d; j++)
+    //    somme += (1 + ele_key_incides[j]) * kDict[j];
 
         for (unsigned j = 0; j < N2; j++)
         somme += (1 + ele_key_incides[j]) * kDict[j];
@@ -977,3 +1068,4 @@ bool Hash_Table_SPA::find_element (unsigned eleId, Ele_pos& ele_pos, TensorSPA& 
     return false; // the control flow will reach here only if the element is not found.
 }
 
+#endif
