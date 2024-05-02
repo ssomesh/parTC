@@ -22,5 +22,5 @@ The executable will be generated within the top-level directory of the repositor
 
 * For running experiments on real-life tensors from [FROSTT](http://frostt.io/tensors/)
 ```
-OMP_NUM_THREADS=4 ./a.out nips.tns dimN_4_R_2_4.meta 0 1
+OMP_NUM_THREADS=4 ./a.out nips.tns 4d.meta 0 1
 ```
