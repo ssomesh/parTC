@@ -117,10 +117,10 @@ int main(int argc, char* argv[])
 
        Tensor O = tc_fksCuckoo (HT_A, HT_B, A_copy, B); // performs tensor contraction A x B with the specified contraction indices
 
-     Tensor D = matricize_sort_spGEMM(A,B);
+    // Tensor D = matricize_sort_spGEMM(A,B);
 
 
-     Tensor C = matricize_spGEMM(A,B); //spMM using cxsparse
+   //  Tensor C = matricize_spGEMM(A,B); 
 
        
 
@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
 
 
 
-#if 1
+#if 0
 
   // verify the correctness of the result
 
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
   }
 #endif
 
-#if 1
+#if 0
 
   // verify the correctness of the result obtained via the two matricization methods
 
