@@ -3,6 +3,7 @@
 #include <cassert>
 #include <unordered_map>
 #include <vector>
+#include <random>
 
 using namespace std;
 
@@ -15,6 +16,19 @@ bool isEqualAfterSorting(unsigned* arr, unsigned d, unsigned ind1, unsigned ind2
   }
 
   return true;
+}
+
+void Swap(Tensor &A, unsigned ind1, unsigned ind2) {
+
+    for(unsigned i = 0; i < A.d; ++i) {
+        unsigned tmp = A.hedges_array[ind1 * A.d + i];
+        A.hedges_array[ind1 * A.d + i] = A.hedges_array[ind2 * A.d + i];
+        A.hedges_array[ind2 * A.d + i] = tmp;
+    }
+
+    double tmp = A.val_array[ind1];
+    A.val_array[ind1] = A.val_array[ind2];
+    A.val_array[ind2] = tmp;
 }
 
 /*Taken from Sparta source code*/
@@ -69,6 +83,8 @@ int CompareIndices(unsigned * arr, unsigned d, unsigned loc1, unsigned loc2)
 /*Taken from Sparta source code*/
 static void QuickSort(unsigned * arr, unsigned * aux, unsigned d, unsigned l, unsigned r) 
 {
+ 
+  //cout << "l = " << l << " r = " << r << endl;
 
 // Note: to sort array of size N, starting at index 0,
 // call the function with (l = 0 and r = N)
@@ -77,6 +93,26 @@ static void QuickSort(unsigned * arr, unsigned * aux, unsigned d, unsigned l, un
         return;
     }
     p = (l+r) / 2;
+
+   // unsigned* mysortarr = (unsigned*) malloc(sizeof(unsigned) *3*d);
+   // for(unsigned ii=0; ii < d; ++ii ) {
+   //     mysortarr[ii] = arr[l*d+ii];
+   //     mysortarr[d+ii] = arr[p*d+ii];
+   //     mysortarr[2*d+ii] = arr[(r-1)*d+ii];
+   // }
+
+     if(CompareIndices(arr,d,l,p) == 1) Swap(arr,aux,d,l,p);
+     if(CompareIndices(arr,d,p,r-1) == 1) Swap(arr,aux,d,p,r-1);
+     if(CompareIndices(arr,d,l,p) == 1) Swap(arr,aux,d,l,p);
+    
+   // for(unsigned ii=0; ii < d; ++ii ) {
+   //      arr[l*d+ii]= mysortarr[ii] ;
+   //     arr[p*d+ii] =  mysortarr[d+ii] ;
+   //     arr[(r-1)*d+ii] =  mysortarr[2*d+ii];
+   // }
+   //  
+   // free(mysortarr);
+      
     for(i = l, j = r-1; ; ++i, --j) {
         while(CompareIndices(arr, d, i, p) < 0) { // compare the elements at location i and j in arr
             ++i;
@@ -95,9 +131,9 @@ static void QuickSort(unsigned * arr, unsigned * aux, unsigned d, unsigned l, un
         }
     }
 
-    #pragma omp task 	
+    #pragma omp task if(i-l > 1024)
 	{ QuickSort(arr, aux, d, l, i); }
-	#pragma omp task 	
+	#pragma omp task if(r-i > 1024)	
 	{ QuickSort(arr, aux, d, i, r); }	
 }
 
@@ -111,6 +147,10 @@ static void QuickSort(unsigned * arr, unsigned * aux, double * vals, unsigned d,
         return;
     }
     p = (l+r) / 2;
+     if(CompareIndices(arr,d,l,p) == 1) Swap(arr,aux,vals,d,l,p);
+     if(CompareIndices(arr,d,p,r-1) == 1) Swap(arr,aux,vals,d,p,r-1);
+     if(CompareIndices(arr,d,l,p) == 1) Swap(arr,aux,vals,d,l,p);
+
     for(i = l, j = r-1; ; ++i, --j) {
         while(CompareIndices(arr, d, i, p) < 0) { // compare the elements at location i and j in arr
             ++i;
@@ -129,17 +169,36 @@ static void QuickSort(unsigned * arr, unsigned * aux, double * vals, unsigned d,
         }
     }
 
-    #pragma omp task 	
+    #pragma omp task if(i-l > 1024)
 	{ QuickSort(arr, aux, vals, d, l, i); }
-	#pragma omp task 	
+	#pragma omp task if(r-i > 1024)	
 	{ QuickSort(arr, aux, vals, d, i, r); }	
 }
+
+void shuffle (Tensor& A) {
+
+mt19937_64  prng(0);
+        uniform_real_distribution<> distribution(  0.0, 1.0 );
+	for(unsigned i = 0; i < A.N; ++i) { 
+                unsigned offset = (unsigned)( distribution( prng ) * (A.N-i) );
+		unsigned x = i + offset;
+		// exchange the contents at positions 'i' and 'x'
+                Swap(A,i,x);
+	}
+
+}
+
 
 
 
 Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
 
-  unsigned nThreads;
+//shuffle(A);
+//shuffle(B);
+
+
+  unsigned nThreads = 1;
+#ifndef ssnoOMP
 #pragma omp parallel 
     	{
          #pragma omp master 
@@ -147,7 +206,7 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
     			nThreads = omp_get_num_threads();
     		}
     	}
-	
+#endif
     cout << "nThreads = " << nThreads << endl;
     uint64_t elapsed;
     chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
@@ -182,6 +241,16 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
      }
 }
 
+
+//cout << "Before QuickSort AB_concat_size = " << AB_concat_size << endl;
+
+//   for(unsigned i = 0; i < AB_concat_size; ++i) {
+//    for(unsigned j = 0; j < num_key_dimensions; ++j) {
+//           cout << AB_contraction_indices_contacatinated[i*num_key_dimensions+j] <<  " \n"[j+1 == num_key_dimensions];
+//    }
+//}
+
+
 #pragma omp parallel num_threads(nThreads)
 {
 #pragma omp single nowait
@@ -189,6 +258,13 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
 		QuickSort (AB_contraction_indices_contacatinated, aux_ids_array, num_key_dimensions, 0, AB_concat_size);
 	}
 }
+//cout << "After QuickSort AB_concat_size = " << AB_concat_size << endl;
+
+//   for(unsigned i = 0; i < AB_concat_size; ++i) {
+//    for(unsigned j = 0; j < num_key_dimensions; ++j) {
+//           cout << AB_contraction_indices_contacatinated[i*num_key_dimensions+j] <<  " \n"[j+1 == num_key_dimensions];
+//    }
+//}
 
    // create an indirection array.
    unsigned * arr_indirect = (unsigned*) malloc(sizeof(unsigned) * AB_concat_size);
@@ -253,6 +329,7 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
 	arr_indirect[aux_ids_array[i]] = arr_predicate[i];
   }
 
+//cout << "Step-1: sorting of A and B together by the contraction indices. Done." << endl;
 
    // Step-2: Sort A by its noncontraction indices 
 
@@ -354,6 +431,7 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
 	}
 }
 
+//cout << "Step-2: sorting of A by the external indices. Done." << endl;
 
    // Step-3: Sort B by its noncontraction indices 
 
@@ -439,6 +517,8 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
 
   }
 
+
+//cout << "Step-3: sorting of B by the external indices. Done." << endl;
 
 #pragma omp parallel num_threads(nThreads)
 {
@@ -556,6 +636,7 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
 	}
 
 
+//cout << "Step-4: convert A from COO to CSC. Done." << endl;
 
 
 /* Conversion of B from COO to  CSC*/
@@ -664,6 +745,8 @@ Tensor matricize_sort_spGEMM (Tensor& A, Tensor& B) {
 			col_ptrs_B[lo+1] += col_ptrs_B[lo];		
 	}
 
+//cout << "Step-5: convert B from COO to CSC. Done." << endl;
+
     chrono::high_resolution_clock::time_point t3 = chrono::high_resolution_clock::now();
     elapsed = chrono::duration_cast<chrono::nanoseconds>(t3 - t1).count();
     cout << "Total time for matricization = " << (double)(elapsed * 1.E-9 ) << " (s)" << endl;
@@ -729,6 +812,9 @@ exit(1);
   }
 
 
+    chrono::high_resolution_clock::time_point t300 = chrono::high_resolution_clock::now();
+//    elapsed = chrono::duration_cast<chrono::nanoseconds>(t3 - t1).count();
+//    cout << "Total time for matricization = " << (double)(elapsed * 1.E-9 ) << " (s)" << endl;
     cs* C_csc = NULL;
     C_csc= cs_multiply (A_csc, B_csc) ;
 
@@ -736,6 +822,10 @@ exit(1);
         cerr << "CXSparse returned a NULL output object!! Check the input!" << endl;
       exit(1);
     }
+
+    chrono::high_resolution_clock::time_point t400 = chrono::high_resolution_clock::now();
+    elapsed = chrono::duration_cast<chrono::nanoseconds>(t400 - t300).count();
+    cout << "Total time for multiplication = " << (double)(elapsed * 1.E-9 ) << " (s)" << endl;
 
     Tensor C;
 
@@ -788,6 +878,8 @@ exit(1);
     chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
     elapsed = chrono::duration_cast<chrono::nanoseconds>(t2 - t1).count();
     cout << "Total time for sortMatSpGEMM = " << (double)(elapsed * 1.E-9 ) << " (s)" << endl;
+
+exit(1);
 
     return C;
    
