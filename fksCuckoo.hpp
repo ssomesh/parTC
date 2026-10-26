@@ -227,7 +227,7 @@ Aux_data::Aux_data() {
     capacity = 1; // start at capacity = 1 then double
     size = 0;
 
-    aux_array = (unsigned*) malloc (sizeof(unsigned*) * capacity);
+    aux_array = (unsigned*) malloc (sizeof(unsigned) * capacity);
 }
 
 void Aux_data::insert(unsigned eleId) {

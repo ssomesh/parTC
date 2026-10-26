@@ -228,7 +228,7 @@ Aux_data_SPA::Aux_data_SPA() {
     //capacity = 1; // start at capacity = 1 then double
     //size = 0;
 
-    aux_array = (unsigned*) malloc (sizeof(unsigned*));
+    aux_array = (unsigned*) malloc (sizeof(unsigned));
 }
 
 void Aux_data_SPA::insert(unsigned eleId) {
@@ -434,7 +434,7 @@ void BucketSPA::rehash(unsigned eleId, TensorSPA& A, unsigned long long * kDict,
                 //cout << k1 << " " << k2 << " worked!!" << endl;
                 k[0] = k1;
                 k[1] = k2;
-                
+
                 num_distinct_elements += 1; // the new element is successfully added
                 return;
             }
@@ -445,7 +445,6 @@ void BucketSPA::rehash(unsigned eleId, TensorSPA& A, unsigned long long * kDict,
 
         }
     }
-
         cerr << "None of the keys in kDict worked.. ABORTING!"  << endl;
         fflush(stderr);
         exit(1);
@@ -625,7 +624,7 @@ void BucketSPA::cuckooHash(unsigned eleId, TensorSPA& A, unsigned long long * kD
 //      aux_ptrs[ii+1] = aux_ptrs_copy[ii+1];
 //  }
 //#endif
-              //bool change = manageBucketSPASize(); 
+              //bool change = manageBucketSPASize();
               rehash( eleId,  A,  kDict,  MAX_KEYS, p, q);
 }
 
@@ -761,7 +760,7 @@ void Hash_Table_SPA::perform_second_level_hashing (unsigned eleId, TensorSPA& A,
 
              bucket_ptrs[bucketId]->manageBucketSPASize();
 bucket_ptrs[bucketId]->k[0] = 0;
-bucket_ptrs[bucketId]->k[0] = 1;
+bucket_ptrs[bucketId]->k[1] = 1;
             bucket_ptrs[bucketId]->rehash( eleId,  A,  kDict,  MAX_KEYS, p, q);
             return;
      }

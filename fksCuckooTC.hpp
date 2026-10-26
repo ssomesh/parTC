@@ -168,9 +168,7 @@ Tensor tc_fksCuckoo (Hash_Table* HT_A, Hash_Table* HT_B, Tensor& A, Tensor& B) {
     uint64_t elapsed;
     chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
 
-    unsigned nThreads = omp_get_num_threads();
-
-    omp_set_num_threads(nThreads); // Use  nThreads for all consecutive parallel regions
+    unsigned nThreads = omp_get_max_threads();
 
     unsigned num_contraction_indices_A = A.d - A.num_key_dimensions;
 
